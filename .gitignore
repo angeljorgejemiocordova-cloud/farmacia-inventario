@@ -1,0 +1,15 @@
+# .NET
+FarmaciaInventario.Api/bin/
+FarmaciaInventario.Api/obj/
+
+# Node / Vite
+FarmaciaInventario.Web/node_modules/
+FarmaciaInventario.Web/dist/
+
+# Archivos de configuración local con datos sensibles
+FarmaciaInventario.Api/appsettings.Development.json
+
+# Sistema operativo / editores
+.vs/
+.vscode/
+*.user

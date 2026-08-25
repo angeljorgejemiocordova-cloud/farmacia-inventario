@@ -1,0 +1,230 @@
+:root {
+  --color-bg: #F7F9F9;
+  --color-surface: #FFFFFF;
+  --color-border: #E1E7E5;
+  --color-primary: #0F6B5C;
+  --color-primary-dark: #0B4F44;
+  --color-primary-soft: #E4F0EC;
+  --color-text: #14201E;
+  --color-text-secondary: #5B6B68;
+
+  --color-vencido: #8B1E1E;
+  --color-vencido-bg: #FBE7E5;
+  --color-critico: #C6432B;
+  --color-critico-bg: #FCEAE5;
+  --color-advertencia: #C98A1E;
+  --color-advertencia-bg: #FBF1DD;
+  --color-normal: #0F6B5C;
+  --color-normal-bg: #E4F0EC;
+
+  --font-display: 'Space Grotesk', sans-serif;
+  --font-body: 'Inter', sans-serif;
+  --font-mono: 'IBM Plex Mono', monospace;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+
+  --radius: 8px;
+  --shadow-sm: 0 1px 2px rgba(20, 32, 30, 0.06);
+  --shadow-md: 0 4px 16px rgba(20, 32, 30, 0.08);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-body);
+  background: var(--color-bg);
+  color: var(--color-text);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+table {
+  font-variant-numeric: tabular-nums;
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+input, select {
+  font-family: var(--font-body);
+  font-size: 14px;
+}
+
+button {
+  font-family: var(--font-body);
+  cursor: pointer;
+}
+
+button:focus-visible,
+input:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* ==========================================================
+   Layout responsivo
+   ========================================================== */
+
+.app-shell {
+  display: flex;
+  min-height: 100vh;
+  background: var(--color-bg);
+}
+
+.sidebar {
+  width: 220px;
+  background: var(--color-primary-dark);
+  color: white;
+  padding: var(--space-5) var(--space-4);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+.marca {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: var(--space-6);
+}
+
+.enlace-nav {
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  color: rgba(255, 255, 255, 0.85);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  display: block;
+}
+
+.enlace-nav-activo {
+  color: var(--color-primary-dark);
+  background: #8FD9C4;
+  font-weight: 600;
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.boton-secundario {
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  border-radius: var(--radius);
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.boton-hamburguesa {
+  display: none;
+  border: none;
+  background: none;
+  font-size: 22px;
+  padding: 4px 8px;
+  color: var(--color-text);
+}
+
+.overlay-movil {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .boton-hamburguesa {
+    display: block;
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    z-index: 50;
+    transform: translateX(-100%);
+    transition: transform 0.2s ease;
+  }
+
+  .sidebar-abierta {
+    transform: translateX(0);
+  }
+
+  .overlay-movil {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(20, 32, 30, 0.5);
+    z-index: 40;
+  }
+
+  .nombre-usuario {
+    display: none;
+  }
+
+  .tabla-responsiva thead {
+    display: none;
+  }
+
+  .tabla-responsiva,
+  .tabla-responsiva tbody,
+  .tabla-responsiva tr,
+  .tabla-responsiva td {
+    display: block;
+    width: 100%;
+  }
+
+  .tabla-responsiva tr {
+    padding: var(--space-3) var(--space-4);
+    border-top: 1px solid var(--color-border);
+  }
+
+  .tabla-responsiva td {
+    padding: 4px 0;
+    border: none !important;
+  }
+
+  .tabla-responsiva td[data-etiqueta]::before {
+    content: attr(data-etiqueta);
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  .form-grid-2 {
+    grid-template-columns: 1fr !important;
+  }
+}
