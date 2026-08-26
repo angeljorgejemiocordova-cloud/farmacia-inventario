@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import EscanerCodigoBarras from '../components/EscanerCodigoBarras';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import Layout from '../components/Layout';
@@ -17,7 +18,41 @@ function NuevoProducto() {
   });
   const [error, setError] = useState('');
   const [enviando, setEnviando] = useState(false);
+  const [escaneando, setEscaneando] = useState(false);
+  const [buscandoOrigen, setBuscandoOrigen] = useState(false);
+  const [avisoEscaneo, setAvisoEscaneo] = useState('');
 
+  const manejarCodigoDetectado = async (codigo) => {
+    setEscaneando(false);
+    setAvisoEscaneo('');
+    setBuscandoOrigen(true);
+
+    try {
+      const respuesta = await fetch(
+        `${import.meta.env.VITE_API_URL || 'http://localhost:5013/api/v1'}/productos/buscar-externo/${codigo}`,
+        { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
+      );
+
+      if (respuesta.ok) {
+        const datos = await respuesta.json();
+        setForm({
+          ...form,
+          codigoBarras: codigo,
+          nombre: datos.nombre || form.nombre,
+          laboratorio: datos.marca || form.laboratorio,
+        });
+        setAvisoEscaneo(`✓ Identificado: ${datos.nombre}${datos.marca ? ' -- ' + datos.marca : ''}`);
+      } else {
+        setForm({ ...form, codigoBarras: codigo });
+        setAvisoEscaneo('No se encontró información de este código -- completa los datos manualmente');
+      }
+    } catch {
+      setForm({ ...form, codigoBarras: codigo });
+      setAvisoEscaneo('No se pudo consultar el origen del producto -- completa los datos manualmente');
+    } finally {
+      setBuscandoOrigen(false);
+    }
+  };
   const actualizar = (campo, valor) => setForm({ ...form, [campo]: valor });
 
   const manejarSubmit = async (evento) => {
@@ -104,14 +139,47 @@ function NuevoProducto() {
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
-            <Campo etiqueta="Código de barras (opcional)">
-              <input
-                type="text"
-                value={form.codigoBarras}
-                onChange={(e) => actualizar('codigoBarras', e.target.value)}
-                style={estiloInput}
-              />
+                        <Campo etiqueta="Código de barras (opcional)">
+              <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                <input
+                  type="text"
+                  value={form.codigoBarras}
+                  onChange={(e) => actualizar('codigoBarras', e.target.value)}
+                  style={{ ...estiloInput, flex: 1 }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setEscaneando(true)}
+                  style={{
+                    padding: '10px 14px',
+                    borderRadius: 'var(--radius)',
+                    border: '1px solid var(--color-border)',
+                    background: 'white',
+                    fontSize: '18px',
+                  }}
+                  title="Escanear código de barras"
+                >
+                  📷
+                </button>
+              </div>
+              {buscandoOrigen && (
+                <p style={{ fontSize: '12px', color: 'var(--color-text-secondary)', marginTop: '4px' }}>
+                  Buscando información del producto…
+                </p>
+              )}
+              {avisoEscaneo && (
+                <p style={{ fontSize: '12px', color: 'var(--color-text-secondary)', marginTop: '4px' }}>
+                  {avisoEscaneo}
+                </p>
+              )}
             </Campo>
+
+            {escaneando && (
+              <EscanerCodigoBarras
+                onDetectado={manejarCodigoDetectado}
+                onCerrar={() => setEscaneando(false)}
+              />
+            )}
             <Campo etiqueta="Precio de venta (Bs)">
               <input
                 type="number"

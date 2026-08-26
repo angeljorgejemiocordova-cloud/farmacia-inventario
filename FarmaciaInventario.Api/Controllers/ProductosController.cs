@@ -44,20 +44,67 @@ namespace FarmaciaInventario.Api.Controllers
 
             return Ok(producto);
         }
-// GET: api/v1/productos/buscar-codigo/{codigo}
-[HttpGet("buscar-codigo/{codigo}")]
-public async Task<ActionResult<Producto>> BuscarPorCodigoBarras(string codigo)
-{
-    var producto = await _context.Productos
-        .FirstOrDefaultAsync(p => p.CodigoBarras == codigo && p.Activo);
 
-    if (producto == null)
-    {
-        return NotFound(new { mensaje = "No existe un producto con ese código de barras" });
-    }
+        // GET: api/v1/productos/buscar-codigo/{codigo}
+        // Búsqueda EXACTA por código de barras dentro de tu propio catálogo.
+        [HttpGet("buscar-codigo/{codigo}")]
+        public async Task<ActionResult<Producto>> BuscarPorCodigoBarras(string codigo)
+        {
+            var producto = await _context.Productos
+                .FirstOrDefaultAsync(p => p.CodigoBarras == codigo && p.Activo);
 
-    return Ok(producto);
-}
+            if (producto == null)
+            {
+                return NotFound(new { mensaje = "No existe un producto con ese código de barras" });
+            }
+
+            return Ok(producto);
+        }
+
+        // GET: api/v1/productos/buscar-externo/{codigo}
+        // Consulta una base de datos pública cuando el código no existe en tu catálogo --
+        // útil para identificar productos nuevos al escanearlos por primera vez.
+        [HttpGet("buscar-externo/{codigo}")]
+        public async Task<ActionResult> BuscarEnBaseExterna(string codigo, [FromServices] IHttpClientFactory httpClientFactory)
+        {
+            var cliente = httpClientFactory.CreateClient();
+            var url = $"https://api.upcitemdb.com/prod/trial/lookup?upc={codigo}";
+
+            try
+            {
+                var respuesta = await cliente.GetAsync(url);
+                if (!respuesta.IsSuccessStatusCode)
+                {
+                    return NotFound(new { mensaje = "No se pudo consultar la base de datos externa" });
+                }
+
+                var contenido = await respuesta.Content.ReadAsStringAsync();
+                using var documento = System.Text.Json.JsonDocument.Parse(contenido);
+                var items = documento.RootElement.GetProperty("items");
+
+                if (items.GetArrayLength() == 0)
+                {
+                    return NotFound(new { mensaje = "Este código no está registrado en ninguna base de datos pública" });
+                }
+
+                var item = items[0];
+                var resultado = new
+                {
+                    nombre = item.TryGetProperty("title", out var t) ? t.GetString() : null,
+                    marca = item.TryGetProperty("brand", out var b) ? b.GetString() : null,
+                    descripcion = item.TryGetProperty("description", out var d) ? d.GetString() : null,
+                    imagenUrl = item.TryGetProperty("images", out var imgs) && imgs.GetArrayLength() > 0
+                        ? imgs[0].GetString()
+                        : null,
+                };
+
+                return Ok(resultado);
+            }
+            catch
+            {
+                return StatusCode(503, new { mensaje = "El servicio de identificación externa no está disponible en este momento" });
+            }
+        }
 
         [HttpPost]
         public async Task<ActionResult<Producto>> CrearProducto(Producto producto)
