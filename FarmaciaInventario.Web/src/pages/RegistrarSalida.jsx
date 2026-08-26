@@ -75,7 +75,7 @@ function RegistrarSalida() {
 
   return (
     <Layout titulo="Registrar salida">
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-5)', alignItems: 'start' }}>
+      <div className="layout-2col">
         <div
           style={{
             background: 'var(--color-surface)',
