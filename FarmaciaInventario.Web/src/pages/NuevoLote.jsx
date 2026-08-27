@@ -1,15 +1,18 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../services/api';
 import Layout from '../components/Layout';
 
 function NuevoLote() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const productoIdPrellenado = searchParams.get('productoId');
+  const productoNombrePrellenado = searchParams.get('productoNombre');
   const [productos, setProductos] = useState([]);
   const [sucursales, setSucursales] = useState([]);
 
-  const [form, setForm] = useState({
-    productoId: '',
+    const [form, setForm] = useState({
+    productoId: productoIdPrellenado || '',
     sucursalId: '',
     numeroLote: '',
     fechaIngreso: new Date().toISOString().slice(0, 10),
@@ -52,7 +55,7 @@ function NuevoLote() {
     }
   };
 
-  return (
+    return (
     <Layout titulo="Nuevo lote">
       <div
         style={{
@@ -63,6 +66,21 @@ function NuevoLote() {
           maxWidth: '560px',
         }}
       >
+        {productoNombrePrellenado && (
+          <div
+            style={{
+              background: 'var(--color-normal-bg)',
+              color: 'var(--color-normal)',
+              padding: '10px 12px',
+              borderRadius: 'var(--radius)',
+              fontSize: '13px',
+              fontWeight: 600,
+              marginBottom: 'var(--space-4)',
+            }}
+          >
+            ✓ Producto "{productoNombrePrellenado}" creado -- ahora registra su primer lote
+          </div>
+        )}
         <form onSubmit={manejarSubmit}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
             <Campo etiqueta="Producto">

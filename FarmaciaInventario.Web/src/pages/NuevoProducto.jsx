@@ -61,12 +61,13 @@ function NuevoProducto() {
     setEnviando(true);
 
     try {
-      await api.post('/productos', {
+            const respuesta = await api.post('/productos', {
         ...form,
         precioVenta: parseFloat(form.precioVenta) || 0,
         codigoBarras: form.codigoBarras || null,
       });
-      navigate('/productos');
+      // Encadena directo a crear su primer lote, sin tener que buscarlo de nuevo
+      navigate(`/lotes/nuevo?productoId=${respuesta.data.id}&productoNombre=${encodeURIComponent(respuesta.data.nombre)}`);
     } catch (err) {
       setError(err.response?.data?.mensaje || 'No se pudo crear el producto');
     } finally {
