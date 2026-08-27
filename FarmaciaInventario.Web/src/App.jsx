@@ -8,6 +8,7 @@ import NuevoLote from './pages/NuevoLote';
 import Alertas from './pages/Alertas';
 import RegistrarSalida from './pages/RegistrarSalida';
 import Proveedores from './pages/Proveedores';
+import EstacionEscaneo from './pages/EstacionEscaneo';
 
 function RutaProtegida({ children }) {
   const token = localStorage.getItem('token');
@@ -27,6 +28,7 @@ function App() {
         <Route path="/alertas" element={<RutaProtegida><Alertas /></RutaProtegida>} />
         <Route path="/salidas" element={<RutaProtegida><RegistrarSalida /></RutaProtegida>} />
         <Route path="/proveedores" element={<RutaProtegida><Proveedores /></RutaProtegida>} />
+        <Route path="/escanear" element={<RutaProtegida><EstacionEscaneo /></RutaProtegida>} />
         <Route path="*" element={<Navigate to="/login" />} />
       </Routes>
     </BrowserRouter>

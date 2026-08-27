@@ -1,20 +1,23 @@
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import EscanerCodigoBarras from '../components/EscanerCodigoBarras';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import Layout from '../components/Layout';
 
-function NuevoProducto() {
+ffunction NuevoProducto() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
   const [form, setForm] = useState({
-    nombre: '',
-    principioActivo: '',
-    presentacion: '',
+    nombre: searchParams.get('nombre') || '',
+    principioActivo: searchParams.get('principioActivo') || '',
+    presentacion: searchParams.get('presentacion') || '',
     unidadMedida: '',
-    laboratorio: '',
-    codigoBarras: '',
+    laboratorio: searchParams.get('laboratorio') || '',
+    codigoBarras: searchParams.get('codigoBarras') || '',
     precioVenta: '',
-    requiereReceta: false,
+    requiereReceta: searchParams.get('requiereReceta') === 'true',
   });
   const [error, setError] = useState('');
   const [enviando, setEnviando] = useState(false);
@@ -141,28 +144,12 @@ function NuevoProducto() {
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
                         <Campo etiqueta="Código de barras (opcional)">
-              <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-                <input
-                  type="text"
-                  value={form.codigoBarras}
-                  onChange={(e) => actualizar('codigoBarras', e.target.value)}
-                  style={{ ...estiloInput, flex: 1 }}
-                />
-                <button
-                  type="button"
-                  onClick={() => setEscaneando(true)}
-                  style={{
-                    padding: '10px 14px',
-                    borderRadius: 'var(--radius)',
-                    border: '1px solid var(--color-border)',
-                    background: 'white',
-                    fontSize: '18px',
-                  }}
-                  title="Escanear código de barras"
-                >
-                  📷
-                </button>
-              </div>
+                            <input
+                type="text"
+                value={form.codigoBarras}
+                onChange={(e) => actualizar('codigoBarras', e.target.value)}
+                style={estiloInput}
+              />
                             {form.codigoBarras && (
                 <p className="mono" style={{ fontSize: '13px', fontWeight: 600, marginTop: '4px', wordBreak: 'break-all' }}>
                   Código capturado: {form.codigoBarras}

@@ -48,18 +48,47 @@ namespace FarmaciaInventario.Api.Controllers
         // GET: api/v1/productos/buscar-codigo/{codigo}
         // Búsqueda EXACTA por código de barras dentro de tu propio catálogo.
         [HttpGet("buscar-codigo/{codigo}")]
-        public async Task<ActionResult<Producto>> BuscarPorCodigoBarras(string codigo)
+public async Task<ActionResult> BuscarPorCodigoBarras(string codigo, [FromServices] IHttpClientFactory httpClientFactory)
+{
+    var productoLocal = await _context.Productos
+        .FirstOrDefaultAsync(p => p.CodigoBarras == codigo && p.Activo);
+
+    if (productoLocal != null)
+    {
+        return Ok(new { origen = "catalogo", producto = productoLocal });
+    }
+
+    try
+    {
+        var cliente = httpClientFactory.CreateClient();
+        var url = $"https://api.upcitemdb.com/prod/trial/lookup?upc={codigo}";
+        var respuesta = await cliente.GetAsync(url);
+
+        if (respuesta.IsSuccessStatusCode)
         {
-            var producto = await _context.Productos
-                .FirstOrDefaultAsync(p => p.CodigoBarras == codigo && p.Activo);
+            var contenido = await respuesta.Content.ReadAsStringAsync();
+            using var documento = System.Text.Json.JsonDocument.Parse(contenido);
+            var items = documento.RootElement.GetProperty("items");
 
-            if (producto == null)
+            if (items.GetArrayLength() > 0)
             {
-                return NotFound(new { mensaje = "No existe un producto con ese código de barras" });
+                var item = items[0];
+                var externo = new
+                {
+                    nombre = item.TryGetProperty("title", out var t) ? t.GetString() : null,
+                    marca = item.TryGetProperty("brand", out var b) ? b.GetString() : null,
+                };
+                return Ok(new { origen = "externo", producto = externo });
             }
-
-            return Ok(producto);
         }
+    }
+    catch
+    {
+        // Si falla la consulta externa, seguimos al nivel 3 (IA) sin interrumpir el flujo.
+    }
+
+    return NotFound(new { mensaje = "No se encontró en el catálogo ni en la base externa", sugerirIA = true });
+}
 
         // GET: api/v1/productos/buscar-externo/{codigo}
         // Consulta una base de datos pública cuando el código no existe en tu catálogo --

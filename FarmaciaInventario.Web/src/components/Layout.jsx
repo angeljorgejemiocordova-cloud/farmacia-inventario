@@ -3,6 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 
 const ENLACES = [
   { to: '/dashboard', label: 'Inicio' },
+  { to: '/escanear', label: '📷 Estación de escaneo' },
   { to: '/productos', label: 'Productos' },
   { to: '/lotes', label: 'Lotes' },
   { to: '/alertas', label: 'Alertas' },

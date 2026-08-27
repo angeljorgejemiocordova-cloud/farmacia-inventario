@@ -15,6 +15,7 @@ builder.Services.AddDbContext<FarmaciaInventario.Api.Data.FarmaciaDbContext>(opt
 
 // ---- Servicios propios ----
 builder.Services.AddScoped<TokenService>();
+builder.Services.AddScoped<IdentificacionIAService>();
 builder.Services.AddHttpClient();
 
 // ---- CORS: permite que el frontend (localhost:5173) llame a esta API ----
