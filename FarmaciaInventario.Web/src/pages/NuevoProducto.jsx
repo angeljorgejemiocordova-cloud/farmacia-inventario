@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import Layout from '../components/Layout';
 
-ffunction NuevoProducto() {
+function NuevoProducto() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
