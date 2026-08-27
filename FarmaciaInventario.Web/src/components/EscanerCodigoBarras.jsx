@@ -1,8 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { BrowserMultiFormatReader, DecodeHintType, BarcodeFormat } from '@zxing/library';
 
-// Restringimos los formatos a los que realmente usan los medicamentos --
-// menos trabajo de decodificación, más velocidad y menos falsos positivos.
 const hints = new Map();
 hints.set(DecodeHintType.POSSIBLE_FORMATS, [
   BarcodeFormat.EAN_13,
@@ -10,17 +8,30 @@ hints.set(DecodeHintType.POSSIBLE_FORMATS, [
   BarcodeFormat.UPC_A,
   BarcodeFormat.UPC_E,
   BarcodeFormat.CODE_128,
+  BarcodeFormat.CODE_39,
+  BarcodeFormat.ITF,
+  BarcodeFormat.CODABAR,
+  BarcodeFormat.QR_CODE,
+  BarcodeFormat.DATA_MATRIX,
 ]);
+// TRY_HARDER le pide al decodificador intentar más estrategias por cada
+// fotograma (rotaciones, distintos niveles de contraste) -- más preciso
+// con códigos en superficies difíciles, a cambio de un poco más de CPU.
+hints.set(DecodeHintType.TRY_HARDER, true);
 
 function EscanerCodigoBarras({ onDetectado, onCerrar }) {
   const videoRef = useRef(null);
   const lectorRef = useRef(null);
-  const ultimaLecturaRef = useRef({ codigo: null, veces: 0 });
+  // En vez de exigir 2 lecturas SEGUIDAS idénticas (frágil: un solo fotograma
+  // borroso en medio reinicia el conteo), llevamos un historial de las últimas
+  // lecturas y aceptamos el código que más se repite -- más tolerante a ruido.
+  const historialRef = useRef([]);
 
   const [error, setError] = useState('');
   const [linternaDisponible, setLinternaDisponible] = useState(false);
   const [linternaActiva, setLinternaActiva] = useState(false);
   const [pistaVideo, setPistaVideo] = useState(null);
+  const [ultimaLecturaVisible, setUltimaLecturaVisible] = useState('');
 
   useEffect(() => {
     iniciarCamara();
@@ -30,19 +41,18 @@ function EscanerCodigoBarras({ onDetectado, onCerrar }) {
 
   const iniciarCamara = async () => {
     try {
-      // Usa la API nativa del navegador si existe (más rápida y precisa);
-      // si no, ZXing se encarga de decodificar por software.
-      const usaDetectorNativo = 'BarcodeDetector' in window;
-
       const lector = new BrowserMultiFormatReader(hints);
       lectorRef.current = lector;
 
       await lector.decodeFromConstraints(
         {
           video: {
-            facingMode: 'environment', // cámara trasera, no la frontal
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
+            facingMode: 'environment',
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+            // 'continuous' hace que el celular siga reenfocando automáticamente
+            // en vez de enfocar una sola vez al abrir la cámara.
+            advanced: [{ focusMode: 'continuous' }],
           },
         },
         videoRef.current,
@@ -53,7 +63,6 @@ function EscanerCodigoBarras({ onDetectado, onCerrar }) {
         }
       );
 
-      // Detecta si el dispositivo tiene linterna controlable
       const stream = videoRef.current?.srcObject;
       const track = stream?.getVideoTracks?.()[0];
       if (track) {
@@ -70,19 +79,21 @@ function EscanerCodigoBarras({ onDetectado, onCerrar }) {
     lectorRef.current?.reset();
   };
 
-  // Exige leer el MISMO código dos veces seguidas antes de aceptarlo --
-  // reduce drásticamente los falsos positivos por un movimiento brusco.
   const manejarLectura = (codigo) => {
-    const anterior = ultimaLecturaRef.current;
-    if (anterior.codigo === codigo) {
-      const veces = anterior.veces + 1;
-      ultimaLecturaRef.current = { codigo, veces };
-      if (veces >= 2) {
+    setUltimaLecturaVisible(codigo);
+
+    const historial = [...historialRef.current, codigo].slice(-5); // conserva las últimas 5
+    historialRef.current = historial;
+
+    const conteos = {};
+    for (const c of historial) {
+      conteos[c] = (conteos[c] || 0) + 1;
+      // En cuanto un código se repite 2 veces dentro del historial reciente, lo aceptamos.
+      if (conteos[c] >= 2) {
         detenerCamara();
-        onDetectado(codigo);
+        onDetectado(c);
+        return;
       }
-    } else {
-      ultimaLecturaRef.current = { codigo, veces: 1 };
     }
   };
 
@@ -92,8 +103,7 @@ function EscanerCodigoBarras({ onDetectado, onCerrar }) {
       await pistaVideo.applyConstraints({ advanced: [{ torch: !linternaActiva }] });
       setLinternaActiva(!linternaActiva);
     } catch {
-      // Algunos dispositivos reportan soporte de linterna pero fallan al activarla --
-      // fallamos en silencio, no es crítico para el flujo principal.
+      // silencioso -- no crítico
     }
   };
 
@@ -113,7 +123,6 @@ function EscanerCodigoBarras({ onDetectado, onCerrar }) {
       <div style={{ position: 'relative', width: '100%', maxWidth: '480px' }}>
         <video ref={videoRef} style={{ width: '100%', borderRadius: '8px' }} muted playsInline />
 
-        {/* Marco guía */}
         <div
           style={{
             position: 'absolute',
@@ -131,6 +140,12 @@ function EscanerCodigoBarras({ onDetectado, onCerrar }) {
       <p style={{ color: 'white', marginTop: 'var(--space-4)', fontSize: '14px' }}>
         Centra el código de barras dentro del marco
       </p>
+
+      {ultimaLecturaVisible && (
+        <p style={{ color: '#8FD9C4', fontSize: '13px', fontFamily: 'var(--font-mono)' }}>
+          Detectando: {ultimaLecturaVisible}
+        </p>
+      )}
 
       {error && (
         <p style={{ color: 'var(--color-critico)', background: 'white', padding: '8px 12px', borderRadius: '8px' }}>

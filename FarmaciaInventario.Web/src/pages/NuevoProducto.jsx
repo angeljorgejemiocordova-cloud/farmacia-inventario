@@ -163,9 +163,9 @@ function NuevoProducto() {
                   📷
                 </button>
               </div>
-              {buscandoOrigen && (
-                <p style={{ fontSize: '12px', color: 'var(--color-text-secondary)', marginTop: '4px' }}>
-                  Buscando información del producto…
+                            {form.codigoBarras && (
+                <p className="mono" style={{ fontSize: '13px', fontWeight: 600, marginTop: '4px', wordBreak: 'break-all' }}>
+                  Código capturado: {form.codigoBarras}
                 </p>
               )}
               {avisoEscaneo && (
