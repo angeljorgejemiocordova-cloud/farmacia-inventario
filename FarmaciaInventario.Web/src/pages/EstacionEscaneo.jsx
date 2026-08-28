@@ -66,11 +66,10 @@ function EstacionEscaneo() {
       );
       setDatosIA(respuesta.data);
       setEtapa(ETAPA.RESULTADO_IA);
-    } catch (err) {
-      const mensaje = err.code === 'ECONNABORTED'
-        ? 'La IA tardó demasiado en responder. Verifica tu conexión e intenta de nuevo.'
-        : 'No se pudo identificar el producto con IA. Intenta de nuevo o regístralo manualmente.';
-      setError(mensaje);
+        } catch (err) {
+      console.error('Error identificando con IA:', err);
+      const detalle = err.response?.data?.mensaje || err.message || 'Error desconocido';
+      setError(`Detalle técnico: ${detalle}`);
       setEtapa(ETAPA.OFRECER_IA);
     }
   };
