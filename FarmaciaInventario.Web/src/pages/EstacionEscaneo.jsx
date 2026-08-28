@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import EscanerCodigoBarras from '../components/EscanerCodigoBarras';
 import Layout from '../components/Layout';
 import api from '../services/api';
@@ -13,6 +14,7 @@ const ETAPA = {
 };
 
 function EstacionEscaneo() {
+  const navigate = useNavigate();
   const [etapa, setEtapa] = useState(ETAPA.ESCANEANDO);
   const [codigoActual, setCodigoActual] = useState('');
   const [productoEncontrado, setProductoEncontrado] = useState(null);
@@ -48,7 +50,7 @@ function EstacionEscaneo() {
     inputFotoRef.current?.click();
   };
 
-  const manejarFotoSeleccionada = async (evento) => {
+    const manejarFotoSeleccionada = async (evento) => {
     const archivo = evento.target.files?.[0];
     if (!archivo) return;
 
@@ -57,21 +59,46 @@ function EstacionEscaneo() {
 
     try {
       const base64 = await convertirABase64(archivo);
-      const respuesta = await api.post('/productos/identificar-ia', { imagenBase64: base64 });
+      const respuesta = await api.post(
+        '/productos/identificar-ia',
+        { imagenBase64: base64 },
+        { timeout: 45000 } // si no responde en 45s, avisamos en vez de colgar para siempre
+      );
       setDatosIA(respuesta.data);
       setEtapa(ETAPA.RESULTADO_IA);
     } catch (err) {
-      setError('No se pudo identificar el producto con IA. Intenta de nuevo o regístralo manualmente.');
+      const mensaje = err.code === 'ECONNABORTED'
+        ? 'La IA tardó demasiado en responder. Verifica tu conexión e intenta de nuevo.'
+        : 'No se pudo identificar el producto con IA. Intenta de nuevo o regístralo manualmente.';
+      setError(mensaje);
       setEtapa(ETAPA.OFRECER_IA);
     }
   };
 
+  // Comprime la foto antes de enviarla -- las fotos de cámara pueden pesar
+  // varios MB, lo que hace la subida lenta o poco confiable en redes móviles.
+  // Reducimos a un ancho máximo razonable para lectura de texto (1024px)
+  // y calidad JPEG 0.75, suficiente para que la IA lea el empaque con claridad.
   const convertirABase64 = (archivo) => {
     return new Promise((resolve, reject) => {
       const lector = new FileReader();
       lector.onload = () => {
-        const resultado = lector.result;
-        resolve(resultado.split(',')[1]);
+        const imagen = new Image();
+        imagen.onload = () => {
+          const anchoMaximo = 1024;
+          const escala = Math.min(1, anchoMaximo / imagen.width);
+          const canvas = document.createElement('canvas');
+          canvas.width = imagen.width * escala;
+          canvas.height = imagen.height * escala;
+
+          const contexto = canvas.getContext('2d');
+          contexto.drawImage(imagen, 0, 0, canvas.width, canvas.height);
+
+          const dataUrlComprimido = canvas.toDataURL('image/jpeg', 0.75);
+          resolve(dataUrlComprimido.split(',')[1]);
+        };
+        imagen.onerror = reject;
+        imagen.src = lector.result;
       };
       lector.onerror = reject;
       lector.readAsDataURL(archivo);
@@ -93,10 +120,10 @@ function EstacionEscaneo() {
   return (
     <Layout titulo="Estación de escaneo">
       <div style={{ maxWidth: '480px', margin: '0 auto' }}>
-        {etapa === ETAPA.ESCANEANDO && (
+                {etapa === ETAPA.ESCANEANDO && (
           <EscanerCodigoBarras
             onDetectado={manejarCodigoDetectado}
-            onCerrar={() => {}}
+            onCerrar={() => navigate('/dashboard')}
           />
         )}
 
