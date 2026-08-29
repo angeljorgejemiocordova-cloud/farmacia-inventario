@@ -37,7 +37,7 @@ namespace FarmaciaInventario.Api.Services
             }
 
             var cliente = _httpClientFactory.CreateClient();
-            var url = $"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={apiKey}";
+            var url = $"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={apiKey}";
 
             // Instrucciones estrictas: SOLO extraer texto impreso visible en el empaque.
             // Nunca sugerir dosis, usos clínicos, ni ningún consejo médico.
