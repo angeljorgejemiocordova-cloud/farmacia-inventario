@@ -62,7 +62,7 @@ function EstacionEscaneo() {
       const respuesta = await api.post(
         '/productos/identificar-ia',
         { imagenBase64: base64 },
-        { timeout: 45000 } // si no responde en 45s, avisamos en vez de colgar para siempre
+        { timeout: 60000 } // si no responde en 60s, avisamos en vez de colgar para siempre
       );
       setDatosIA(respuesta.data);
       setEtapa(ETAPA.RESULTADO_IA);
