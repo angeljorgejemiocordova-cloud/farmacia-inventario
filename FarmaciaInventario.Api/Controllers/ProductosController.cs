@@ -46,53 +46,51 @@ namespace FarmaciaInventario.Api.Controllers
         }
 
         // GET: api/v1/productos/buscar-codigo/{codigo}
-        // Búsqueda EXACTA por código de barras dentro de tu propio catálogo.
+        // Búsqueda en cascada: primero tu catálogo, luego la base pública externa.
         [HttpGet("buscar-codigo/{codigo}")]
-public async Task<ActionResult> BuscarPorCodigoBarras(string codigo, [FromServices] IHttpClientFactory httpClientFactory)
-{
-    var productoLocal = await _context.Productos
-        .FirstOrDefaultAsync(p => p.CodigoBarras == codigo && p.Activo);
-
-    if (productoLocal != null)
-    {
-        return Ok(new { origen = "catalogo", producto = productoLocal });
-    }
-
-    try
-    {
-        var cliente = httpClientFactory.CreateClient();
-        var url = $"https://api.upcitemdb.com/prod/trial/lookup?upc={codigo}";
-        var respuesta = await cliente.GetAsync(url);
-
-        if (respuesta.IsSuccessStatusCode)
+        public async Task<ActionResult> BuscarPorCodigoBarras(string codigo, [FromServices] IHttpClientFactory httpClientFactory)
         {
-            var contenido = await respuesta.Content.ReadAsStringAsync();
-            using var documento = System.Text.Json.JsonDocument.Parse(contenido);
-            var items = documento.RootElement.GetProperty("items");
+            var productoLocal = await _context.Productos
+                .FirstOrDefaultAsync(p => p.CodigoBarras == codigo && p.Activo);
 
-            if (items.GetArrayLength() > 0)
+            if (productoLocal != null)
             {
-                var item = items[0];
-                var externo = new
-                {
-                    nombre = item.TryGetProperty("title", out var t) ? t.GetString() : null,
-                    marca = item.TryGetProperty("brand", out var b) ? b.GetString() : null,
-                };
-                return Ok(new { origen = "externo", producto = externo });
+                return Ok(new { origen = "catalogo", producto = productoLocal });
             }
-        }
-    }
-    catch
-    {
-        // Si falla la consulta externa, seguimos al nivel 3 (IA) sin interrumpir el flujo.
-    }
 
-    return NotFound(new { mensaje = "No se encontró en el catálogo ni en la base externa", sugerirIA = true });
-}
+            try
+            {
+                var cliente = httpClientFactory.CreateClient();
+                var url = $"https://api.upcitemdb.com/prod/trial/lookup?upc={codigo}";
+                var respuesta = await cliente.GetAsync(url);
+
+                if (respuesta.IsSuccessStatusCode)
+                {
+                    var contenido = await respuesta.Content.ReadAsStringAsync();
+                    using var documento = System.Text.Json.JsonDocument.Parse(contenido);
+                    var items = documento.RootElement.GetProperty("items");
+
+                    if (items.GetArrayLength() > 0)
+                    {
+                        var item = items[0];
+                        var externo = new
+                        {
+                            nombre = item.TryGetProperty("title", out var t) ? t.GetString() : null,
+                            marca = item.TryGetProperty("brand", out var b) ? b.GetString() : null,
+                        };
+                        return Ok(new { origen = "externo", producto = externo });
+                    }
+                }
+            }
+            catch
+            {
+                // Si falla la consulta externa, seguimos al nivel 3 (IA) sin interrumpir el flujo.
+            }
+
+            return NotFound(new { mensaje = "No se encontró en el catálogo ni en la base externa", sugerirIA = true });
+        }
 
         // GET: api/v1/productos/buscar-externo/{codigo}
-        // Consulta una base de datos pública cuando el código no existe en tu catálogo --
-        // útil para identificar productos nuevos al escanearlos por primera vez.
         [HttpGet("buscar-externo/{codigo}")]
         public async Task<ActionResult> BuscarEnBaseExterna(string codigo, [FromServices] IHttpClientFactory httpClientFactory)
         {
@@ -132,6 +130,38 @@ public async Task<ActionResult> BuscarPorCodigoBarras(string codigo, [FromServic
             catch
             {
                 return StatusCode(503, new { mensaje = "El servicio de identificación externa no está disponible en este momento" });
+            }
+        }
+
+        public record IdentificarImagenRequest(string ImagenBase64);
+
+        // POST: api/v1/productos/identificar-ia
+        // Analiza una foto del empaque y extrae la información impresa usando IA.
+        // Último recurso: solo se usa cuando ni el catálogo ni la base externa reconocen el código.
+        [HttpPost("identificar-ia")]
+        public async Task<ActionResult> IdentificarConIA(
+            IdentificarImagenRequest request,
+            [FromServices] Services.IdentificacionIAService servicioIA)
+        {
+            if (string.IsNullOrEmpty(request.ImagenBase64))
+            {
+                return BadRequest(new { mensaje = "No se recibió ninguna imagen" });
+            }
+
+            try
+            {
+                var resultado = await servicioIA.IdentificarDesdeImagenAsync(request.ImagenBase64);
+
+                if (resultado == null)
+                {
+                    return NotFound(new { mensaje = "No se pudo identificar el producto en la imagen" });
+                }
+
+                return Ok(resultado);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(503, new { mensaje = "El servicio de identificación por IA no está disponible", detalle = ex.Message });
             }
         }
 
