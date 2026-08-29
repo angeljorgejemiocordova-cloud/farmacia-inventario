@@ -93,7 +93,7 @@ No inventes información que no esté impresa literalmente en el empaque.";
 
             HttpResponseMessage? respuesta = null;
             string textoRespuesta = "";
-            const int maximoIntentos = 3;
+            const int maximoIntentos = 2;
 
             for (int intento = 1; intento <= maximoIntentos; intento++)
             {
