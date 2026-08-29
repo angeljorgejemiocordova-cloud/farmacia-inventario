@@ -91,14 +91,30 @@ No inventes información que no esté impresa literalmente en el empaque.";
             var json = JsonSerializer.Serialize(cuerpoSolicitud);
             var contenido = new StringContent(json, Encoding.UTF8, "application/json");
 
-            var respuesta = await cliente.PostAsync(url, contenido);
-            var textoRespuesta = await respuesta.Content.ReadAsStringAsync();
+            HttpResponseMessage? respuesta = null;
+            string textoRespuesta = "";
+            const int maximoIntentos = 3;
 
-            if (!respuesta.IsSuccessStatusCode)
+            for (int intento = 1; intento <= maximoIntentos; intento++)
             {
-                throw new Exception($"Error consultando Gemini: {textoRespuesta}");
-            }
+                respuesta = await cliente.PostAsync(url, contenido);
+                textoRespuesta = await respuesta.Content.ReadAsStringAsync();
 
+                if (respuesta.IsSuccessStatusCode)
+                {
+                    break; // éxito, salimos del ciclo de reintentos
+                }
+
+                // 503 = modelo sobrecargado momentáneamente -- vale la pena reintentar
+                if ((int)respuesta.StatusCode == 503 && intento < maximoIntentos)
+                {
+                    await Task.Delay(intento * 2000); // espera 2s, luego 4s entre intentos
+                    continue;
+                }
+
+                // Cualquier otro error, o se acabaron los intentos: fallamos con el mensaje REAL de Google
+                throw new Exception($"Gemini respondió {(int)respuesta.StatusCode}: {textoRespuesta}");
+            }
             using var documento = JsonDocument.Parse(textoRespuesta);
             var textoGenerado = documento.RootElement
                 .GetProperty("candidates")[0]
